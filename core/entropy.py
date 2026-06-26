@@ -85,7 +85,8 @@ def calculate_segment_cost(match: dict) -> float:
         return math.log2(n_start) + (k - 1) * math.log2(branching)
 
     if match_type == "osint":
-        variant_count = max(1, data.get("total_variant_count", 1))
+        # Cout par REGLE (decisions_projet.md section 7), pas un total global
+        variant_count = max(1, data.get("rule_variant_count", 1))
         return math.log2(variant_count)
 
     if match_type == "date":
