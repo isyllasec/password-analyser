@@ -162,3 +162,48 @@ def test_unmatched_segment_uses_local_charset_not_global():
     assert gap_info["alphabet_size"] == 10  # chiffres uniquement dans le gap
     expected_gap_cost = 8 * math.log2(10)
     assert math.isclose(gap_info["cost"], expected_gap_cost)
+
+
+# --- Cas limites -----------------------------------------------------------------
+
+def test_adjusted_entropy_empty_password_no_crash():
+    # Mot de passe vide : aucun match possible, ne doit pas planter,
+    # H_theo et H_ajustee doivent etre nuls.
+    result = adjusted_entropy("", [])
+    assert result["h_theoretical"] == 0.0
+    assert result["h_adjusted"] == 0.0
+    assert result["unmatched_segments"] == []
+
+
+def test_adjusted_entropy_unicode_password_no_crash():
+    # Limitation documentee : un caractere accentue (ex. 'a circonflexe')
+    # est compte dans la classe "lower" (taille fixe 26), sans elargir
+    # reellement l'alphabet effectif. Ce test fige le comportement ACTUEL
+    # pour eviter une regression silencieuse, pas une garantie de justesse
+    # theorique parfaite -- a mentionner en limite dans le rapport.
+    password = "pâssword123"
+    result = adjusted_entropy(password, [])
+    assert result["h_theoretical"] > 0.0  # ne plante pas, renvoie une valeur sensee
+    assert detect_charsets("â") == {"lower"}
+
+
+def test_greedy_segmentation_cascade_with_multiple_overlaps():
+    # 4 matchs en cascade : le plus long doit gagner, puis parmi les
+    # restants compatibles (non chevauchants avec lui), le suivant le
+    # plus long doit etre retenu a son tour.
+    matches = [
+        {"start": 0, "end": 10, "type": "dictionary", "data": {"rank": 1}},   # le plus long, doit gagner
+        {"start": 2, "end": 6, "type": "qwerty", "data": {"start_positions": 40, "branching_factor": 2}},  # chevauche le 1er -> rejete
+        {"start": 10, "end": 14, "type": "date", "data": {"date_space_size": 200}},  # ne chevauche personne -> retenu
+        {"start": 11, "end": 13, "type": "dictionary", "data": {"rank": 5}},  # chevauche le 3eme (plus court) -> rejete
+    ]
+    retained = greedy_segmentation(matches)
+    retained_spans = sorted((m["start"], m["end"]) for m in retained)
+    assert retained_spans == [(0, 10), (10, 14)]
+
+
+def test_find_dictionary_and_qwerty_on_single_character_password_no_crash():
+    # Mot de passe d'1 seul caractere : aucun match possible (min_length=4),
+    # ne doit pas planter sur des indices hors limites.
+    result = adjusted_entropy("a", [])
+    assert result["h_theoretical"] >= 0.0
