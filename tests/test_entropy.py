@@ -76,7 +76,7 @@ def test_segment_cost_leet_dictionary_adds_substitution_bits():
 
 
 def test_segment_cost_osint():
-    match = {"start": 0, "end": 5, "type": "osint", "data": {"total_variant_count": 16}}
+    match = {"start": 0, "end": 5, "type": "osint", "data": {"rule_variant_count": 16}}
     assert math.isclose(calculate_segment_cost(match), 4.0)  # log2(16) = 4
 
 
