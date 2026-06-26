@@ -160,3 +160,57 @@ def test_detect_all_patterns_empty_for_random_password():
     password = "xK9#mZ4vQ"
     matches = detect_all_patterns(password, WORD_RANKS)
     assert matches == []
+
+
+# --- Cas limites -----------------------------------------------------------------
+
+def test_find_dictionary_matches_empty_password_no_crash():
+    assert find_dictionary_matches("", WORD_RANKS) == []
+
+
+def test_find_leet_matches_empty_password_no_crash():
+    assert find_leet_matches("", WORD_RANKS) == []
+
+
+def test_find_qwerty_matches_empty_password_no_crash():
+    assert find_qwerty_matches("", min_length=4) == []
+
+
+def test_find_date_matches_empty_password_no_crash():
+    assert find_date_matches("") == []
+
+
+def test_detect_all_patterns_empty_password_no_crash():
+    assert detect_all_patterns("", WORD_RANKS) == []
+
+
+def test_find_qwerty_matches_single_character_no_crash():
+    # Un seul caractere : aucune transition possible, ne doit pas planter
+    # sur l'acces a l'index suivant.
+    assert find_qwerty_matches("q", min_length=4) == []
+
+
+def test_find_date_matches_password_shorter_than_four_chars_no_crash():
+    # range(n - 3) avec n < 3 doit rester une plage vide, pas une erreur.
+    assert find_date_matches("12") == []
+
+
+def test_find_dictionary_matches_unicode_no_crash_and_no_false_positive():
+    # Un caractere accentue casse l'egalite exacte avec l'entree "password"
+    # du dictionnaire -- comportement attendu (pas de detection floue/fuzzy
+    # en MVP), mais ca ne doit pas planter.
+    matches = find_dictionary_matches("pâssword", WORD_RANKS)
+    assert matches == []
+
+
+def test_find_leet_matches_unicode_no_crash():
+    # normalize_leetspeak doit gerer un caractere unicode sans lever d'erreur
+    # (meme s'il n'est pas dans la table de substitution leetspeak).
+    matches = find_leet_matches("pâssw0rd", WORD_RANKS)
+    assert isinstance(matches, list)  # ne plante pas, peu importe le contenu
+
+
+def test_detect_all_patterns_unicode_password_no_crash():
+    password = "pâssw0rd1999"
+    matches = detect_all_patterns(password, WORD_RANKS)
+    assert isinstance(matches, list)
