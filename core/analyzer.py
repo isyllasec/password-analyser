@@ -4,12 +4,14 @@ Pipeline séquentiel (cf. decisions_projet.md section 5) :
 1. patterns.py (axe 2) sur le mot de passe brut
 2. osint.py (axe 3) si au moins un champ d'identité est fourni
 3. entropy.py (axe 1) à partir des matchs combinés (patterns + osint)
-4. cracking_time.py (axe 4) -- PAS ENCORE IMPLÉMENTÉ, champ laissé à None
+4. cracking_time.py (axe 4) à partir de retained_matches (axe 1)
 5. hibp.py (bonus) -- PAS ENCORE IMPLÉMENTÉ, champ laissé à None
 
 `analyzer.py` ne recalcule jamais rien lui-même : il appelle les fonctions des
 modules core/ et assemble un objet résultat unique. `result_view.py` ne devra
-jamais recalculer quoi que ce soit non plus.
+jamais recalculer quoi que ce soit non plus -- c'est pourquoi retained_matches,
+discarded_matches et unmatched_segments (sortie brute d'adjusted_entropy) sont
+exposés tels quels sur AnalysisResult, plutôt que jetés après l'appel.
 """
 from dataclasses import dataclass, field
 from datetime import date
@@ -18,6 +20,7 @@ from typing import Optional
 from core.patterns import detect_all_patterns, load_word_ranks
 from core.osint import detect_osint_patterns
 from core.entropy import adjusted_entropy
+from core.cracking_time import estimate_cracking_time
 
 # Chemin du dictionnaire de mots de passe courants (axe 2), relatif à la racine du projet.
 WORD_RANKS_PATH = "data/common_passwords.txt"
@@ -37,17 +40,20 @@ def _get_default_word_ranks() -> dict:
 class AnalysisResult:
     """Objet résultat unique produit par analyze_password().
 
-    Les champs axe 4 et bonus sont déjà présents (Optional, défaut None) pour
-    figer le schéma final dès maintenant et éviter de retoucher result_view.py
-    quand ces modules seront prêts.
+    Le champ bonus (hibp_breached) reste Optional/None pour figer le schéma
+    final dès maintenant et éviter de retoucher result_view.py quand ce
+    module sera prêt.
     """
     password_length: int
-    pattern_matches: list = field(default_factory=list)   # axe 2
-    osint_matches: list = field(default_factory=list)      # axe 3
-    theoretical_entropy_bits: float = 0.0                  # axe 1
-    adjusted_entropy_bits: float = 0.0                     # axe 1
-    cracking_time_estimate: Optional[dict] = None          # axe 4 -- pas encore implémenté
-    hibp_breached: Optional[bool] = None                   # bonus -- pas encore implémenté
+    pattern_matches: list = field(default_factory=list)        # axe 2
+    osint_matches: list = field(default_factory=list)           # axe 3
+    theoretical_entropy_bits: float = 0.0                       # axe 1
+    adjusted_entropy_bits: float = 0.0                          # axe 1
+    retained_matches: list = field(default_factory=list)        # axe 1 (sortie brute adjusted_entropy)
+    discarded_matches: list = field(default_factory=list)       # axe 1 (sortie brute adjusted_entropy)
+    unmatched_segments: list = field(default_factory=list)      # axe 1 (sortie brute adjusted_entropy)
+    cracking_time_estimate: Optional[dict] = None                # axe 4
+    hibp_breached: Optional[bool] = None                         # bonus -- pas encore implémenté
 
     @property
     def all_matches(self) -> list:
@@ -83,10 +89,20 @@ def analyze_password(
 
     entropy_result = adjusted_entropy(password, combined_matches)
 
+    # Axe 4 : utilise retained_matches (porte cost_bits), pas combined_matches.
+    cracking_time_estimate = estimate_cracking_time(
+        entropy_result["h_adjusted"],
+        entropy_result["retained_matches"],
+    )
+
     return AnalysisResult(
         password_length=len(password),
         pattern_matches=pattern_matches,
         osint_matches=osint_matches,
         theoretical_entropy_bits=entropy_result["h_theoretical"],
         adjusted_entropy_bits=entropy_result["h_adjusted"],
+        retained_matches=entropy_result["retained_matches"],
+        discarded_matches=entropy_result["discarded_matches"],
+        unmatched_segments=entropy_result["unmatched_segments"],
+        cracking_time_estimate=cracking_time_estimate,
     )
