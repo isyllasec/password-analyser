@@ -181,7 +181,16 @@ def adjusted_entropy(password: str, matches: list) -> dict:
     retained_ids = {id(m) for m in retained}
     gaps = unmatched_segments(len(password), retained)
 
-    matched_cost = sum(calculate_segment_cost(m) for m in retained)
+    # Cout par match calcule une seule fois ici, puis reinjecte dans chaque
+    # match retenu (cle "cost_bits") -- evite que d'autres modules (ex.
+    # cracking_time.py, axe 4) aient a redupliquer calculate_segment_cost.
+    retained_with_cost = []
+    matched_cost = 0.0
+    for m in retained:
+        cost = calculate_segment_cost(m)
+        matched_cost += cost
+        retained_with_cost.append({**m, "cost_bits": cost})
+
     gaps_cost, gaps_breakdown = unmatched_cost(password, gaps)
 
     h_theo = len(password) * global_log2_n
@@ -190,7 +199,7 @@ def adjusted_entropy(password: str, matches: list) -> dict:
     return {
         "h_theoretical": h_theo,
         "h_adjusted": h_adjusted,
-        "retained_matches": retained,
+        "retained_matches": retained_with_cost,
         "discarded_matches": [m for m in matches if id(m) not in retained_ids],
         "unmatched_segments": gaps_breakdown,
         "alphabet_size": global_n,

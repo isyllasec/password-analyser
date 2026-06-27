@@ -207,3 +207,17 @@ def test_find_dictionary_and_qwerty_on_single_character_password_no_crash():
     # ne doit pas planter sur des indices hors limites.
     result = adjusted_entropy("a", [])
     assert result["h_theoretical"] >= 0.0
+
+
+def test_retained_matches_carry_cost_bits_field():
+    # Ajoute pour l'axe 4 (cracking_time.py) : chaque match retenu doit
+    # porter son cout en bits, pour eviter de redupliquer
+    # calculate_segment_cost ailleurs dans le pipeline.
+    password = "password"
+    matches = [{"start": 0, "end": 8, "type": "dictionary", "data": {"rank": 8}}]
+    result = adjusted_entropy(password, matches)
+
+    assert len(result["retained_matches"]) == 1
+    assert math.isclose(result["retained_matches"][0]["cost_bits"], 3.0)  # log2(8) = 3
+    # le match original garde aussi ses cles d'origine (pas de perte d'info)
+    assert result["retained_matches"][0]["type"] == "dictionary"
