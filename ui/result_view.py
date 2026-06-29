@@ -212,9 +212,14 @@ def _render_cracking_time_expander(result) -> None:
 
 # --- Expander bonus : HIBP (a venir) ------------------------------------------
 
-def _render_hibp_expander() -> None:
-    with st.expander("Verification de fuite (a venir)"):
-        st.caption("Fonctionnalite k-anonymat / API HIBP non encore implementee.")
+def _render_hibp_expander(hibp_breached) -> None:
+    with st.expander("Verification de fuite (HIBP)"):
+        if hibp_breached is True:
+            st.error("Trouve dans une fuite connue.")
+        elif hibp_breached is False:
+            st.success("Non trouve dans les fuites connues.")
+        else:
+            st.caption("Non verifie. Utilisez le bouton de verification HIBP.")
 
 
 # --- Point d'entree -----------------------------------------------------------
@@ -229,4 +234,4 @@ def render_result(result, password: str, identity_provided: bool) -> None:
     _render_patterns_expander(result, password)
     _render_osint_expander(result, password, identity_provided)
     _render_cracking_time_expander(result)
-    _render_hibp_expander()
+    _render_hibp_expander(result.hibp_breached)

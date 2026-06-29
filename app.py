@@ -28,7 +28,18 @@ with st.expander("Tester l'exposition a des infos personnelles (optionnel)"):
 
 identity_provided = bool(prenom or nom or date_naissance)
 
+if password != st.session_state.get("last_password"):
+    st.session_state.hibp_breached = None
+    st.session_state.last_password = password
+
 if password:
+    if st.button("Verifier les fuites connues (HIBP)"):
+        checked = analyze_password(
+            password, prenom=prenom or None, nom=nom or None,
+            date_naissance=date_naissance, check_hibp=True,
+        )
+        st.session_state.hibp_breached = checked.hibp_breached
+
     result = analyze_password(
         password,
         prenom=prenom or None,
@@ -36,6 +47,7 @@ if password:
         date_naissance=date_naissance,
         word_ranks=None,
     )
+    result.hibp_breached = st.session_state.get("hibp_breached")
     render_result(result, password, identity_provided)
 else:
     st.caption("Saisissez un mot de passe pour lancer l'analyse.")
