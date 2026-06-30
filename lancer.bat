@@ -24,7 +24,34 @@ call venv\Scripts\activate.bat
 echo Installation des dependances...
 pip install -r requirements.txt --quiet
 
-echo Lancement de l'application...
-streamlit run app.py
+:MENU
+echo.
+echo ============================================
+echo   Analyseur de mots de passe
+echo ============================================
+echo   1. Lancer la version web (navigateur)
+echo   2. Lancer la version desktop (fenetre)
+echo ============================================
+echo.
+set /p choix=Votre choix (1 ou 2) : 
 
+if "%choix%"=="1" goto WEB
+if "%choix%"=="2" goto DESKTOP
+echo.
+echo Choix invalide, merci de saisir 1 ou 2.
+goto MENU
+
+:WEB
+echo.
+echo Lancement de la version web...
+streamlit run app.py
+goto END
+
+:DESKTOP
+echo.
+echo Lancement de la version desktop...
+python app_desktop.py
+goto END
+
+:END
 pause
